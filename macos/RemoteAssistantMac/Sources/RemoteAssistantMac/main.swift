@@ -2,7 +2,10 @@ import AppKit
 import ApplicationServices
 import CoreGraphics
 import SwiftUI
+import UniformTypeIdentifiers
 import RemoteAssistantCore
+
+private let actionDragType = UTType(exportedAs: "com.remoteassistantmac.action-id")
 
 private enum KeyboardSender {
     static func checkPermission() throws {
@@ -46,116 +49,23 @@ private enum KeyboardSender {
     }
 }
 
-private enum SettingsStore {
-    static var fileURL: URL {
-        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return root.appendingPathComponent("RemoteAssistantMac", isDirectory: true)
-            .appendingPathComponent("settings.json")
-    }
-
-    static func load() -> (String, String, String?) {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            return ("Typeless 语音输入", "Fn", nil)
-        }
-        do {
-            let data = try Data(contentsOf: fileURL)
-            guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                throw AssistantError.message("设置文件不是 JSON 对象。")
-            }
-            let title: String
-            if let value = object["actionTitle"] {
-                guard let text = value as? String else { throw AssistantError.message("actionTitle 必须是文字。") }
-                title = text
-            } else { title = "Typeless 语音输入" }
-            let hotkey: String
-            if let value = object["actionHotkey"] ?? object["typelessHotkey"] {
-                guard let text = value as? String else { throw AssistantError.message("actionHotkey 必须是文字。") }
-                hotkey = text
-            } else { hotkey = "Fn" }
-            try validate(title: title, hotkey: hotkey)
-            return (title, hotkey, nil)
-        } catch {
-            return ("Typeless 语音输入", "Fn", "设置无效：\(error.localizedDescription)。请打开齿轮修复。")
-        }
-    }
-
-    static func validate(title: String, hotkey: String) throws {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed.count <= 32 else {
-            throw AssistantError.message("动作名称需为 1–32 个字符。")
-        }
-        guard hotkey.count <= 80 else { throw AssistantError.message("快捷键过长。") }
-        _ = try Shortcut.parse(hotkey)
-    }
-
-    static func save(title: String, hotkey: String) throws {
-        try validate(title: title, hotkey: hotkey)
-        let url = fileURL
-        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        var object: [String: Any] = [:]
-        if FileManager.default.fileExists(atPath: url.path) {
-            do {
-                let data = try Data(contentsOf: url)
-                guard let current = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                    throw AssistantError.message("设置文件不是 JSON 对象。")
-                }
-                if let value = current["actionTitle"], !(value is String) {
-                    throw AssistantError.message("actionTitle 必须是文字。")
-                }
-                if let value = current["actionHotkey"] ?? current["typelessHotkey"], !(value is String) {
-                    throw AssistantError.message("actionHotkey 必须是文字。")
-                }
-                object = current
-            } catch {
-                let backup = url.deletingLastPathComponent().appendingPathComponent("settings.broken-\(UUID().uuidString).bak")
-                try FileManager.default.copyItem(at: url, to: backup)
-            }
-        }
-        object["actionTitle"] = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        object["actionHotkey"] = hotkey.trimmingCharacters(in: .whitespacesAndNewlines)
-        let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
-        try data.write(to: url, options: .atomic)
-    }
-}
-
-private enum ImageFileService {
-    static func writeClipboardImage() throws -> URL {
-        guard let image = NSImage(pasteboard: .general),
-              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
-              let png = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:]) else {
-            throw AssistantError.message("剪贴板中没有可投递的图片。")
-        }
-        let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("RemoteAssistantMac/drops", isDirectory: true)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        let now = Date()
-        if let oldFiles = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.contentModificationDateKey]) {
-            for url in oldFiles where url.lastPathComponent.hasPrefix("RemoteAssistant-") && url.pathExtension == "png" {
-                let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? now
-                if now.timeIntervalSince(modified) > 86_400 { try? FileManager.default.removeItem(at: url) }
-            }
-        }
-        let file = root.appendingPathComponent("RemoteAssistant-\(UUID().uuidString).png")
-        try png.write(to: file, options: .atomic)
-        return file
-    }
-}
-
 private final class AssistantController: NSObject, ObservableObject, NSApplicationDelegate, NSWindowDelegate {
     @Published var expanded = false
-    @Published var capturing = false
     @Published var status = "操作后菜单保持展开，可手动收起。"
-    @Published var actionTitle = "Typeless 语音输入"
-    @Published var actionHotkey = "Fn"
+    @Published var actions = ActionSettingsDocument.default.actions
+    @Published var menuHeight: CGFloat = 520
     private var panel: NSPanel!
     private var settingsWindow: NSWindow?
-    private var captureProcess: Process?
-    private var captureChangeCount = 0
     private var dragOrigin: NSPoint?
     private var settingsError: String?
     private let compactSize = NSSize(width: 88, height: 88)
-    private let menuSize = NSSize(width: 288, height: 424)
     private var rightEdge = true
+    private let settingsStore: ActionSettingsStore = {
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let url = root.appendingPathComponent("RemoteAssistantMac", isDirectory: true)
+            .appendingPathComponent("settings.json")
+        return ActionSettingsStore(fileURL: url)
+    }()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -187,15 +97,20 @@ private final class AssistantController: NSObject, ObservableObject, NSApplicati
         guard !expanded else { return }
         reloadSettings()
         expanded = true
-        resizePanel(to: menuSize)
+        menuHeight = desiredMenuHeight()
+        resizePanel(to: NSSize(width: 300, height: menuHeight))
     }
 
     private func reloadSettings() {
-        let saved = SettingsStore.load()
-        actionTitle = saved.0
-        actionHotkey = saved.1
-        settingsError = saved.2
-        if let error = saved.2 { status = error }
+        let loaded = settingsStore.loadOrCreate()
+        actions = loaded.document.actions
+        settingsError = loaded.error
+        if let error = loaded.error { status = error }
+    }
+
+    private func desiredMenuHeight() -> CGFloat {
+        let maxHeight = max(280, screenForPanel().visibleFrame.height - 24)
+        return min(maxHeight, max(330, CGFloat(actions.count) * 76 + 220))
     }
 
     func collapse() {
@@ -256,102 +171,30 @@ private final class AssistantController: NSObject, ObservableObject, NSApplicati
         return target.processIdentifier
     }
 
-    func capture() {
-        guard !capturing else { return }
-        capturing = true
-        captureChangeCount = NSPasteboard.general.changeCount
-        status = "截图中…取消后可点“结束截图等待”。"
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        task.arguments = ["-i", "-c"]
-        task.terminationHandler = { [weak self] finished in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                guard let self = self, self.captureProcess === finished else { return }
-                self.captureProcess = nil
-                self.capturing = false
-                let board = NSPasteboard.general
-                self.status = finished.terminationStatus == 0 && board.changeCount != self.captureChangeCount && NSImage(pasteboard: board) != nil
-                    ? "截图已复制到剪贴板。"
-                    : "截图已取消或未产生图片；可重新选择区域截图。"
-            }
-        }
+    func performAction(_ action: AssistantAction) {
         do {
-            try task.run()
-            captureProcess = task
-        } catch {
-            capturing = false
-            status = "无法启动系统截图：\(error.localizedDescription)"
-        }
-    }
-
-    func endCaptureWait() {
-        guard capturing else { return }
-        let task = captureProcess
-        captureProcess = nil
-        capturing = false
-        if task?.isRunning == true { task?.terminate() }
-        status = "已结束截图等待；可重新选择区域截图。"
-    }
-
-    func pasteImage() {
-        guard !capturing else { return }
-        var replacementChangeCount: Int?
-        var originalPNG: Data?
-        do {
-            let target = try targetPID()
-            try KeyboardSender.checkPermission()
-            let file = try ImageFileService.writeClipboardImage()
-            originalPNG = try Data(contentsOf: file)
-            let pasteShortcut = try Shortcut.parse("Command+V")
-            guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target else {
-                throw AssistantError.message("前台应用已变化；没有投递图片。")
-            }
-            let board = NSPasteboard.general
-            board.clearContents()
-            replacementChangeCount = board.changeCount
-            guard board.writeObjects([file as NSURL]) else {
-                throw AssistantError.message("无法将 PNG 文件写入系统剪贴板。")
-            }
-            replacementChangeCount = board.changeCount
-            panel.orderOut(nil)
-            defer { panel.orderFrontRegardless() }
-            try KeyboardSender.send(pasteShortcut, to: target)
-            status = "已向目标发送 PNG 文件粘贴；请确认目标应用已接收。"
-        } catch {
-            var restoration = ""
-            let board = NSPasteboard.general
-            if let count = replacementChangeCount, board.changeCount == count, let png = originalPNG {
-                board.clearContents()
-                let item = NSPasteboardItem()
-                _ = item.setData(png, forType: .png)
-                if !board.writeObjects([item]) { restoration = "；原图片剪贴板也未能恢复" }
-            }
-            status = "图片投递失败：\(error.localizedDescription)\(restoration)"
-        }
-    }
-
-    func performAction() {
-        guard !capturing else { return }
-        do {
-            reloadSettings()
             if let settingsError = settingsError { throw AssistantError.message(settingsError) }
             let target = try targetPID()
-            let shortcut = try Shortcut.parse(actionHotkey)
+            let shortcut = try Shortcut.parse(action.shortcut)
             panel.orderOut(nil)
             defer { panel.orderFrontRegardless() }
             try KeyboardSender.send(shortcut, to: target)
-            status = "已向目标发送 \(actionHotkey)；未确认“\(actionTitle)”是否生效。"
+            status = "已发送 \(action.shortcut)；请确认“\(action.title)”的结果。"
         } catch {
             status = "快捷动作失败：\(error.localizedDescription)"
         }
     }
 
     func showSettings() {
-        guard !capturing else { return }
+        if let settingsWindow = settingsWindow {
+            settingsWindow.makeKeyAndOrderFront(nil)
+            return
+        }
         panel.orderOut(nil)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 220),
-                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 620),
+                              styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.title = "快捷操作设置 · 远程助手"
+        window.minSize = NSSize(width: 520, height: 400)
         window.contentView = NSHostingView(rootView: SettingsView(model: self))
         window.delegate = self
         window.center()
@@ -361,13 +204,16 @@ private final class AssistantController: NSObject, ObservableObject, NSApplicati
         window.makeKeyAndOrderFront(nil)
     }
 
-    func saveSettings(title: String, hotkey: String) -> String? {
+    func saveSettings(_ editedActions: [AssistantAction]) -> String? {
         do {
-            try SettingsStore.save(title: title, hotkey: hotkey)
-            actionTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-            actionHotkey = hotkey.trimmingCharacters(in: .whitespacesAndNewlines)
+            let saved = try settingsStore.save(ActionSettingsDocument(actions: editedActions))
+            actions = saved.actions
             settingsError = nil
             status = "设置已保存；请重新聚焦目标应用后再触发动作。"
+            if expanded {
+                menuHeight = desiredMenuHeight()
+                resizePanel(to: NSSize(width: 300, height: menuHeight))
+            }
             settingsWindow?.close()
             return nil
         } catch {
@@ -428,17 +274,24 @@ private struct AssistantView: View {
             }
             .buttonStyle(.plain)
             Text("快捷操作").font(.system(size: 11, weight: .semibold)).foregroundColor(accent)
-            actionButton(model.capturing ? "结束截图等待" : "区域截图",
-                         subtitle: model.capturing ? "取消后点此恢复截图按钮" : "截取画面并复制到剪贴板",
-                         symbol: model.capturing ? "arrow.counterclockwise" : "viewfinder",
-                         action: model.capturing ? model.endCaptureWait : model.capture)
-            actionButton("投递到当前应用", subtitle: "先聚焦输入框，再投递 PNG 文件", symbol: "doc.on.clipboard", action: model.pasteImage)
-                .disabled(model.capturing)
-            actionButton(model.actionTitle, subtitle: "先聚焦输入框 · \(model.actionHotkey)", symbol: "waveform", action: model.performAction)
-                .disabled(model.capturing)
+            ScrollView {
+                LazyVStack(spacing: 10) {
+                    ForEach(model.actions) { action in
+                        actionButton(action.title, subtitle: "执行 · \(action.shortcut)", symbol: "keyboard") {
+                            model.performAction(action)
+                        }
+                        .disabled(!action.enabled)
+                    }
+                    if model.actions.isEmpty {
+                        Text("暂无按钮，可通过齿轮新增。")
+                            .font(.system(size: 12)).foregroundColor(.gray)
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                    }
+                }
+            }
             Text(model.status)
                 .font(.system(size: 10.5)).foregroundColor(.gray)
-                .lineLimit(3).frame(height: 34, alignment: .topLeading)
+                .lineLimit(3).frame(height: 36, alignment: .topLeading)
             Button("收起菜单", action: model.collapse)
                 .buttonStyle(.plain)
                 .font(.system(size: 12))
@@ -446,9 +299,16 @@ private struct AssistantView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 30)
                 .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.07)))
+            Button("退出助手") { NSApp.terminate(nil) }
+                .buttonStyle(.plain)
+                .font(.system(size: 12))
+                .foregroundColor(.red.opacity(0.8))
+                .frame(maxWidth: .infinity)
+                .frame(height: 30)
+                .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.07)))
         }
         .padding(14)
-        .frame(width: 288, height: 424, alignment: .topLeading)
+        .frame(width: 300, height: model.menuHeight, alignment: .topLeading)
     }
 
     private func actionButton(_ title: String, subtitle: String, symbol: String, action: @escaping () -> Void) -> some View {
@@ -474,33 +334,206 @@ private struct AssistantView: View {
 
 private struct SettingsView: View {
     @ObservedObject var model: AssistantController
-    @State private var title: String
-    @State private var hotkey: String
+    @State private var draft: [AssistantAction]
     @State private var error: String?
+    @State private var draggedID: String?
+    @State private var manualEntry = false
 
     init(model: AssistantController) {
         self.model = model
-        _title = State(initialValue: model.actionTitle)
-        _hotkey = State(initialValue: model.actionHotkey)
+        _draft = State(initialValue: model.actions)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("快捷操作设置").font(.headline)
-            TextField("动作名称", text: $title)
-            TextField("快捷键，如 Fn 或 Command+Shift+R", text: $hotkey)
-            Text("请与目标应用中绑定的快捷键保持一致。Windows 的 Win 键设置不会自动迁移。")
-                .font(.caption).foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("快捷操作设置").font(.title3).fontWeight(.semibold)
+                Spacer()
+                Button("＋ 新增按钮") {
+                    draft.append(AssistantAction(id: "custom.\(UUID().uuidString)", title: "新快捷操作", shortcut: ""))
+                }
+            }
+            HStack {
+                Text("拖动左侧 ≡ 调整顺序；点击快捷键框后直接按键录制。")
+                    .font(.caption).foregroundColor(.secondary)
+                Spacer()
+                Toggle("手动编辑", isOn: $manualEntry).font(.caption)
+                    .help("系统快捷键无法录制时，可手动输入组合键")
+            }
+            ScrollView {
+                LazyVStack(spacing: 10) {
+                    ForEach($draft) { $action in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "line.3.horizontal")
+                                    .frame(width: 24, height: 32)
+                                    .foregroundColor(.secondary)
+                                    .help("按住拖动调整顺序")
+                                    .onDrag {
+                                        draggedID = action.id
+                                        let provider = NSItemProvider()
+                                        let id = action.id
+                                        provider.registerDataRepresentation(for: actionDragType, visibility: .ownProcess) { completion in
+                                            completion(Data(id.utf8), nil)
+                                            return nil
+                                        }
+                                        return provider
+                                    }
+                                Toggle("启用", isOn: $action.enabled).labelsHidden()
+                                TextField("按钮名称", text: $action.title)
+                                Button { move(action.id, by: -1) } label: { Image(systemName: "arrow.up") }
+                                    .help("上移")
+                                Button { move(action.id, by: 1) } label: { Image(systemName: "arrow.down") }
+                                    .help("下移")
+                                Button("删除") { draft.removeAll { $0.id == action.id } }
+                            }
+                            HStack(spacing: 8) {
+                                Text("执行快捷键").font(.caption).foregroundColor(.secondary)
+                                ShortcutRecorder(shortcut: $action.shortcut, error: $error)
+                                    .frame(height: 36)
+                                Text("按键录制").font(.caption2).foregroundColor(.secondary)
+                            }
+                            if manualEntry {
+                                TextField("例如 Control+Command+Shift+4", text: $action.shortcut)
+                            }
+                        }
+                        .padding(12)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(.primary.opacity(0.06)))
+                        .onDrop(of: [actionDragType], delegate: ActionReorderDelegate(
+                            targetID: action.id, actions: $draft, draggedID: $draggedID))
+                    }
+                }
+                .padding(.vertical, 2)
+            }
             if let error = error { Text(error).font(.caption).foregroundColor(.red) }
             HStack {
                 Spacer()
                 Button("取消") { NSApp.keyWindow?.close() }
-                Button("保存设置") { error = model.saveSettings(title: title, hotkey: hotkey) }
+                Button("应用设置") { error = model.saveSettings(draft) }
                     .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(22)
-        .frame(width: 400, height: 220)
+        .padding(20)
+        .frame(minWidth: 520, minHeight: 400)
+    }
+
+    private func move(_ id: String, by offset: Int) {
+        guard let index = draft.firstIndex(where: { $0.id == id }) else { return }
+        let destination = index + offset
+        guard draft.indices.contains(destination) else { return }
+        draft.move(fromOffsets: IndexSet(integer: index), toOffset: destination > index ? destination + 1 : destination)
+    }
+}
+
+private struct ActionReorderDelegate: DropDelegate {
+    let targetID: String
+    @Binding var actions: [AssistantAction]
+    @Binding var draggedID: String?
+
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer { draggedID = nil }
+        guard info.hasItemsConforming(to: [actionDragType]),
+              let draggedID = draggedID,
+              let source = actions.firstIndex(where: { $0.id == draggedID }),
+              let target = actions.firstIndex(where: { $0.id == targetID }),
+              source != target else { return false }
+        withAnimation {
+            actions.move(fromOffsets: IndexSet(integer: source), toOffset: target > source ? target + 1 : target)
+        }
+        return true
+    }
+}
+
+private struct ShortcutRecorder: NSViewRepresentable {
+    @Binding var shortcut: String
+    @Binding var error: String?
+
+    func makeNSView(context: Context) -> ShortcutRecorderView { ShortcutRecorderView(frame: .zero) }
+
+    func updateNSView(_ view: ShortcutRecorderView, context: Context) {
+        view.displayText = shortcut
+        view.onCapture = { value in
+            shortcut = value
+            error = nil
+        }
+        view.onError = { message in error = message }
+    }
+}
+
+private final class ShortcutRecorderView: NSView {
+    var onCapture: ((String) -> Void)?
+    var onError: ((String) -> Void)?
+    var displayText = "" { didSet { label.stringValue = displayText.isEmpty ? "点击后按键录制" : displayText } }
+    private let label = NSTextField(labelWithString: "点击后按键录制")
+    private var heldModifiers: [CGKeyCode] = []
+    private var completed = false
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.cornerRadius = 6
+        layer?.borderWidth = 1
+        layer?.borderColor = NSColor.separatorColor.cgColor
+        layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.cell?.lineBreakMode = .byTruncatingMiddle
+        addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 9),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -9),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+        setAccessibilityLabel("录制执行快捷键")
+    }
+
+    required init?(coder: NSCoder) { fatalError("Use init(frame:)") }
+    override var acceptsFirstResponder: Bool { true }
+
+    override func mouseDown(with event: NSEvent) { window?.makeFirstResponder(self) }
+
+    override func becomeFirstResponder() -> Bool {
+        layer?.borderColor = NSColor.systemGreen.cgColor
+        return true
+    }
+
+    override func resignFirstResponder() -> Bool {
+        heldModifiers.removeAll()
+        layer?.borderColor = NSColor.separatorColor.cgColor
+        return true
+    }
+
+    override func flagsChanged(with event: NSEvent) {
+        let code = CGKeyCode(event.keyCode)
+        guard [55, 54, 59, 62, 58, 61, 56, 60, 63].contains(code) else { return }
+        if let index = heldModifiers.firstIndex(of: code) {
+            heldModifiers.remove(at: index)
+        } else {
+            if heldModifiers.isEmpty { completed = false }
+            heldModifiers.append(code)
+        }
+        if !completed && !heldModifiers.isEmpty {
+            let names = heldModifiers.compactMap { Shortcut.name(forKeyCode: $0) }
+            onCapture?(names.joined(separator: "+"))
+        }
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.isARepeat { return }
+        guard let name = Shortcut.name(forKeyCode: CGKeyCode(event.keyCode)) else {
+            onError?("暂不支持按键码 \(event.keyCode)；请录制字母、数字、F1–F12 或常用控制键。")
+            return
+        }
+        let names = heldModifiers.compactMap { Shortcut.name(forKeyCode: $0) } + [name]
+        let value = names.joined(separator: "+")
+        do {
+            _ = try Shortcut.parse(value)
+            onCapture?(value)
+            completed = true
+        } catch {
+            onError?(error.localizedDescription)
+        }
     }
 }
 

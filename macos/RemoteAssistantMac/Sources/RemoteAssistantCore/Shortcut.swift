@@ -48,6 +48,24 @@ public struct Shortcut {
         return Shortcut(keys: keys)
     }
 
+    /// A stable, layout-independent name for keys the shortcut parser can replay.
+    /// The recorder uses these names instead of typed characters, which change with
+    /// keyboard layout and input method.
+    public static func name(forKeyCode code: CGKeyCode) -> String? {
+        let modifiers: [CGKeyCode: String] = [
+            55: "LeftCommand", 54: "RightCommand",
+            59: "LeftControl", 62: "RightControl",
+            58: "LeftOption", 61: "RightOption",
+            56: "LeftShift", 60: "RightShift", 63: "Fn"
+        ]
+        if let name = modifiers[code] { return name }
+
+        let names = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".map { String($0) }
+            + ["Space", "Enter", "Tab", "Escape", "Backspace"]
+            + (1...12).map { "F\($0)" }
+        return names.first { key(named: $0.uppercased())?.code == code }
+    }
+
     private static func key(named name: String) -> Key? {
         let modifiers: [String: (CGKeyCode, CGEventFlags)] = [
             "COMMAND": (55, .maskCommand), "CMD": (55, .maskCommand),
