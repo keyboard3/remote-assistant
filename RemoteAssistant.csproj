@@ -4,6 +4,8 @@
     <Title>远程助手</Title>
     <AssemblyTitle>远程助手</AssemblyTitle>
     <Product>远程助手</Product>
+    <AssemblyName>RemoteAssistant</AssemblyName>
+    <RootNamespace>RemoteAssistant</RootNamespace>
     <TargetFramework>net7.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>

@@ -1,4 +1,4 @@
-<Window x:Class="LunaDesktopHelper.ActionSettingsWindow"
+<Window x:Class="RemoteAssistant.ActionSettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="快捷操作设置" Width="660" Height="680" MinWidth="520" MinHeight="380"

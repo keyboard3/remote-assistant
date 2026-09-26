@@ -1,4 +1,4 @@
-<Window x:Class="LunaDesktopHelper.MainWindow"
+<Window x:Class="RemoteAssistant.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="远程助手" Width="88" Height="88"

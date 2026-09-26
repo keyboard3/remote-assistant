@@ -7,7 +7,7 @@ using System.Windows.Automation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-namespace LunaDesktopHelper;
+namespace RemoteAssistant;
 
 internal sealed record ClipboardImageDropImage(DataObject Data, string ImagePath, uint ClipboardSequence);
 internal sealed record ClipboardImageDropPreparation(DataObject Data, string ImagePath, System.Windows.Point ScreenPoint, string PointSource);
@@ -117,14 +117,11 @@ internal static class ClipboardImageDropService
 
     private static string SaveTemporaryPng(BitmapSource image)
     {
-        var directory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LunaDesktopHelper",
-            "drops");
+        var directory = ApplicationPaths.DropsDirectory;
         Directory.CreateDirectory(directory);
         CleanupOldFiles(directory);
 
-        var path = Path.Combine(directory, $"Luna-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.png");
+        var path = Path.Combine(directory, $"RemoteAssistant-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.png");
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(image));
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
@@ -136,7 +133,7 @@ internal static class ClipboardImageDropService
     {
         try
         {
-            foreach (var path in Directory.EnumerateFiles(directory, "Luna-*.png"))
+            foreach (var path in Directory.EnumerateFiles(directory, "*.png"))
             {
                 try
                 {

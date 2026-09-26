@@ -1,5 +1,5 @@
 using System.Windows;
 
-namespace LunaDesktopHelper;
+namespace RemoteAssistant;
 
 public partial class App : Application { }

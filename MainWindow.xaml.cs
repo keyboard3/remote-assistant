@@ -10,7 +10,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace LunaDesktopHelper;
+namespace RemoteAssistant;
 
 public partial class MainWindow : Window
 {
@@ -24,12 +24,17 @@ public partial class MainWindow : Window
     private long _windowExStyle;
     private ActionSettingsDocument _settings = ActionSettingsDocument.Default;
     private readonly Dictionary<string, Button> _actionButtons = new(StringComparer.Ordinal);
-    private static string PositionFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LunaDesktopHelper", "position.txt");
-    private static string DiagnosticLogPath => Path.Combine(AppContext.BaseDirectory, "luna-ui-diagnostic.log");
+    private static string PositionFile => ApplicationPaths.PositionFile;
+    private static string DiagnosticLogPath => Path.Combine(AppContext.BaseDirectory, "remote-assistant-ui-diagnostic.log");
 
     public MainWindow()
     {
         ResetDiagnosticLog();
+        try { ApplicationPaths.MigrateLegacyUserDataIfNeeded(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogDiagnostic($"Legacy user data migration failed: {ex}");
+        }
         InitializeComponent();
     }
 
@@ -575,7 +580,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            File.WriteAllText(DiagnosticLogPath, $"Luna UI diagnostic start {DateTimeOffset.Now:O}; pid={Environment.ProcessId}; log={DiagnosticLogPath}{Environment.NewLine}");
+            File.WriteAllText(DiagnosticLogPath, $"Remote Assistant UI diagnostic start {DateTimeOffset.Now:O}; pid={Environment.ProcessId}; log={DiagnosticLogPath}{Environment.NewLine}");
         }
         catch { }
     }

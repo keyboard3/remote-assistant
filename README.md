@@ -19,7 +19,7 @@ Windows 端开发、更新和安装统一使用仓库根目录下的唯一入口
 
 脚本会自动完成 Release 发布、覆盖固定安装目录、刷新桌面快捷方式并启动最新版。用户日常只需通过桌面上的“远程助手”快捷方式运行，快捷方式固定指向：
 
-`%LocalAppData%\Programs\LunaDesktopHelper\LunaDesktopHelper.exe`
+`%LocalAppData%\Programs\RemoteAssistant\RemoteAssistant.exe`
 
 不要直接运行 `bin` 或 `.build` 目录中的临时 exe；`.build\windows-release` 仅作为脚本使用的固定中间发布目录。若只需构建和安装、不立即启动，可运行：
 
@@ -27,7 +27,7 @@ Windows 端开发、更新和安装统一使用仓库根目录下的唯一入口
 .\install-windows.ps1 -NoLaunch
 ```
 
-更新程序不会删除 `%LocalAppData%\LunaDesktopHelper\settings.json` 中的用户按钮配置。
+更新程序不会删除 `%LocalAppData%\RemoteAssistant\settings.json` 中的用户按钮配置。首次升级会自动迁移旧 `LunaDesktopHelper` 用户配置。
 
 ### macOS
 
@@ -49,7 +49,7 @@ open .build/远程助手.app
 
 | 平台 | 设置文件 | 默认修饰键 |
 | --- | --- | --- |
-| Windows | `%LocalAppData%\LunaDesktopHelper\settings.json` | `Win` / `Ctrl` / `Alt` |
+| Windows | `%LocalAppData%\RemoteAssistant\settings.json` | `Win` / `Ctrl` / `Alt` |
 | macOS | `~/Library/Application Support/RemoteAssistantMac/settings.json` | `Command` / `Control` / `Option` / `Fn` |
 
 所有按钮都能在设置面板修改名称、录制或手动输入组合键、拖动左侧手柄排序（也可用 ↑ ↓）、启停、删除或动态新增。Windows 端关闭“显示”会保留配置，但不在外部菜单展示；重新开启即可恢复。macOS 端关闭“启用”后仍显示禁用按钮。点“应用设置”后顺序写回各平台自己的配置文件。按钮只负责向当前应用发送配置的按键；图片是否进入剪贴板、粘贴到哪里由系统和目标应用决定。
@@ -121,7 +121,7 @@ Windows 执行快捷键支持组合键，也允许 `RightAlt`、`LeftWin+LeftShi
 
 “区域截图”只发送系统快捷键 `Win+Shift+S`；“复制”和“粘贴”分别发送 `Ctrl+C` 和 `Ctrl+V`。粘贴按钮不会把图片转成 PNG 文件，也不会拖放附件。截图后请确认图片进入系统剪贴板，再选中目标应用的编辑区域执行粘贴。按钮发送后菜单保持展开，可能遮挡截图区域；需要时手动收起。
 
-快捷键动作只校验原前台顶层窗口，也允许桌面作为目标（例如截桌面或复制桌面文件）。LUNA 使用 `SendInput` 发送组合键；本机运行 PowerToys Keyboard Manager 时使用其兼容标记，避免 Ctrl/Alt 键位互换影响模拟按键。程序不注册每个动作的全局触发键。Windows/UIPI、系统保留组合、远程控制输入层或目标应用仍可能拦截动作。
+快捷键动作只校验原前台顶层窗口，也允许桌面作为目标（例如截桌面或复制桌面文件）。远程助手使用 `SendInput` 发送组合键；本机运行 PowerToys Keyboard Manager 时使用其兼容标记，避免 Ctrl/Alt 键位互换影响模拟按键。程序不注册每个动作的全局触发键。Windows/UIPI、系统保留组合、远程控制输入层或目标应用仍可能拦截动作。
 
 ### macOS
 

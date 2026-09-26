@@ -2,7 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace LunaDesktopHelper;
+namespace RemoteAssistant;
 
 public sealed record ActionSettings(string Title, string Hotkey)
 {
@@ -103,7 +103,7 @@ public static class ShortcutParser
 
 public static class ActionSettingsStore
 {
-    public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LunaDesktopHelper", "settings.json");
+    public static string SettingsPath => ApplicationPaths.SettingsFile;
 
     public static ActionSettingsDocument LoadOrCreate(out string? error, out string? migrationBackupPath)
     {
@@ -136,6 +136,12 @@ public static class ActionSettingsStore
     public static ActionSettingsDocument ReadForDisplay(out string? error)
     {
         error = null;
+        try { ApplicationPaths.MigrateLegacyUserDataIfNeeded(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            error = $"无法迁移旧版用户配置：{ex.Message}";
+            return ActionSettingsDocument.Default;
+        }
         if (!File.Exists(SettingsPath)) return ActionSettingsDocument.Default;
         try
         {
