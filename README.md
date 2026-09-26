@@ -11,17 +11,23 @@
 
 ### Windows
 
-在仓库根目录运行：
+Windows 端开发、更新和安装统一使用仓库根目录下的唯一入口：
 
 ```powershell
-dotnet run -c Release
+.\install-windows.ps1
 ```
 
-构建：
+脚本会自动完成 Release 发布、覆盖固定安装目录、刷新桌面快捷方式并启动最新版。用户日常只需通过桌面上的“远程助手”快捷方式运行，快捷方式固定指向：
+
+`%LocalAppData%\Programs\LunaDesktopHelper\LunaDesktopHelper.exe`
+
+不要直接运行 `bin` 或 `.build` 目录中的临时 exe；`.build\windows-release` 仅作为脚本使用的固定中间发布目录。若只需构建和安装、不立即启动，可运行：
 
 ```powershell
-dotnet build -c Release
+.\install-windows.ps1 -NoLaunch
 ```
+
+更新程序不会删除 `%LocalAppData%\LunaDesktopHelper\settings.json` 中的用户按钮配置。
 
 ### macOS
 
