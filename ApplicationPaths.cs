@@ -4,26 +4,31 @@ namespace RemoteAssistant;
 
 internal static class ApplicationPaths
 {
+    private static string UserProfile =>
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
     private static string LocalApplicationData =>
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-    public static string UserDataDirectory => Path.Combine(LocalApplicationData, "RemoteAssistant");
-    public static string LegacyUserDataDirectory => Path.Combine(LocalApplicationData, "LunaDesktopHelper");
+    public static string UserDataDirectory => Path.Combine(UserProfile, ".remote-assistant");
     public static string SettingsFile => Path.Combine(UserDataDirectory, "settings.json");
     public static string PositionFile => Path.Combine(UserDataDirectory, "position.txt");
     public static string DropsDirectory => Path.Combine(UserDataDirectory, "drops");
 
     public static void MigrateLegacyUserDataIfNeeded()
     {
-        if (!Directory.Exists(LegacyUserDataDirectory)) return;
-
-        if (!Directory.Exists(UserDataDirectory))
+        var legacyDirectories = new[]
         {
-            Directory.Move(LegacyUserDataDirectory, UserDataDirectory);
-            return;
-        }
+            Path.Combine(LocalApplicationData, "RemoteAssistant"),
+            Path.Combine(LocalApplicationData, "LunaDesktopHelper")
+        };
 
-        MergeDirectory(LegacyUserDataDirectory, UserDataDirectory);
+        foreach (var legacyDirectory in legacyDirectories)
+        {
+            if (!Directory.Exists(legacyDirectory)) continue;
+            if (!Directory.Exists(UserDataDirectory)) Directory.Move(legacyDirectory, UserDataDirectory);
+            else MergeDirectory(legacyDirectory, UserDataDirectory);
+        }
     }
 
     private static void MergeDirectory(string sourceDirectory, string destinationDirectory)

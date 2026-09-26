@@ -84,6 +84,9 @@ public partial class MainWindow : Window
         if (_expanded) return;
         LogDiagnostic($"Expand begin position=({Left:0.##},{Top:0.##}) size=({Width:0.##},{Height:0.##}) visibility={Visibility} capsule={Capsule.Visibility} menu={Menu.Visibility}");
         _expanded = true;
+        var latestSettings = ActionSettingsStore.ReadForDisplay(out var settingsError);
+        if (settingsError is null) _settings = latestSettings;
+        UpdateActionCards(_settings, settingsError);
         Width = 318;
         Shell.CornerRadius = new CornerRadius(22);
         Menu.Visibility = Visibility.Visible;

@@ -27,7 +27,7 @@ Windows 端开发、更新和安装统一使用仓库根目录下的唯一入口
 .\install-windows.ps1 -NoLaunch
 ```
 
-更新程序不会删除 `%LocalAppData%\RemoteAssistant\settings.json` 中的用户按钮配置。首次升级会自动迁移旧 `LunaDesktopHelper` 用户配置。
+更新程序不会删除 `%USERPROFILE%\.remote-assistant\settings.json` 中的用户按钮配置。首次升级会自动迁移旧 LocalAppData 配置，避免打包应用的目录虚拟化造成桌面版读取到另一份配置。
 
 ### macOS
 
@@ -49,7 +49,7 @@ open .build/远程助手.app
 
 | 平台 | 设置文件 | 默认修饰键 |
 | --- | --- | --- |
-| Windows | `%LocalAppData%\RemoteAssistant\settings.json` | `Win` / `Ctrl` / `Alt` |
+| Windows | `%USERPROFILE%\.remote-assistant\settings.json` | `Win` / `Ctrl` / `Alt` |
 | macOS | `~/Library/Application Support/RemoteAssistantMac/settings.json` | `Command` / `Control` / `Option` / `Fn` |
 
 所有按钮都能在设置面板修改名称、录制或手动输入组合键、拖动左侧手柄排序（也可用 ↑ ↓）、启停、删除或动态新增。Windows 端关闭“显示”会保留配置，但不在外部菜单展示；重新开启即可恢复。macOS 端关闭“启用”后仍显示禁用按钮。点“应用设置”后顺序写回各平台自己的配置文件。按钮只负责向当前应用发送配置的按键；图片是否进入剪贴板、粘贴到哪里由系统和目标应用决定。
