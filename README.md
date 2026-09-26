@@ -2,6 +2,14 @@
 
 一个面向远程桌面操作的贴边快捷助手，提供彼此独立的 Windows 和 macOS 原生实现。
 
+## 界面预览
+
+下面是 Windows 固定安装版的实际运行界面。菜单按钮来自用户配置，可按自己的工具和工作流增删、改名和排序。
+
+<p align="center">
+  <img src="docs/images/windows-menu.png" width="318" alt="Windows 远程助手展开后的快捷操作菜单">
+</p>
+
 | 平台 | 实现 | 系统要求 |
 | --- | --- | --- |
 | Windows | .NET 7 WPF | Windows 10/11、.NET 7 SDK 或 Desktop Runtime |
@@ -57,6 +65,10 @@ open .build/远程助手.app
 ### 快捷动作配置
 
 菜单右上角齿轮打开设置窗。快捷键框默认用于录制；遇到被系统或其他程序抢占、无法正常录制的快捷键时，可打开“手动编辑”直接输入组合键。录制和手动输入共用保存校验。旧版设置启动时会先备份，再迁移为 `schemaVersion: 4` 的有序快捷键数组；已有自定义按钮和顺序保留。
+
+<p align="center">
+  <img src="docs/images/windows-settings.png" width="644" alt="Windows 快捷操作设置窗口">
+</p>
 
 Windows 手动编辑会让原快捷键框直接变为普通文本框，可输入 `LeftWin+LeftShift+S`；macOS 会显示手动输入框，可输入 `Control+Command+Shift+4`。平台按键名称不会自动互译。
 

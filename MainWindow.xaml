@@ -52,9 +52,9 @@
             <Button Grid.Column="2" Style="{StaticResource MenuUtilityButtonStyle}" Padding="0"
                     Click="ActionSettings_Click" ToolTip="管理快捷操作"
                     AutomationProperties.Name="管理快捷操作和组合键">
-              <Path Width="17" Height="17" Stretch="Uniform" Stroke="{StaticResource MutedInk}"
-                    StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeLineJoin="Round"
-                    Data="M12,8.5 A3.5,3.5 0 1 0 12,15.5 A3.5,3.5 0 1 0 12,8.5 M12,2 V5 M12,19 V22 M2,12 H5 M19,12 H22 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M19.1,4.9 L17,7 M7,17 L4.9,19.1" />
+              <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="17"
+                         Foreground="{StaticResource Ink}" HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
             </Button>
             <Button Grid.Column="3" Style="{StaticResource MenuUtilityButtonStyle}" Padding="0"
                     Click="Collapse_Click" ToolTip="收起菜单" AutomationProperties.Name="收起菜单">
