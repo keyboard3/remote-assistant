@@ -76,6 +76,41 @@ Windows 手动编辑会让原快捷键框直接变为普通文本框，可输入
 
 Windows 执行快捷键支持组合键，也允许 `RightAlt`、`LeftWin+LeftShift` 这类纯修饰键组合；macOS 支持左右侧 `Command`、`Control`、`Option`、`Shift`、`Fn` 及常用主键。左右修饰键会在录制和发送时保留。保存或取消设置本身不会向目标应用发送按键。无效配置会显示错误；配置文件中的 `actions` 是按钮唯一来源，程序不会在已有配置里自动补回已删除的按钮。
 
+## 扩展小助手：常用工具与快捷键联动
+
+远程助手本身不替代截图、录屏、OCR、剪贴板或自动化软件，而是把这些软件的全局快捷键集中成适合远程点击的按钮。先在工具中启用或自定义全局快捷键，再在远程助手设置中新增同样的组合键即可。远程助手目前只发送按键，不负责安装、启动或配置下列软件。
+
+### 推荐工具
+
+| 工具 | 平台 | 免费情况 | 适合联动的能力 | 推荐度 |
+| --- | --- | --- | --- | --- |
+| [ShareX](https://getsharex.com/) | Windows | 免费、开源 | 区域截图、即时标注、滚动截图、OCR、录屏、GIF | 首选：一套工具覆盖截图与录屏 |
+| [Flameshot](https://flameshot.org/) | Windows / macOS | 免费、开源 | 区域截图、箭头、文字、编号、模糊和高亮 | 只重视截图标注时更简单 |
+| [OBS Studio](https://obsproject.com/) | Windows / macOS | 免费、开源 | 屏幕、窗口、麦克风、摄像头、多场景录制与直播 | 复杂录屏首选，日常短录屏不如 ShareX 轻便 |
+| [Microsoft PowerToys](https://learn.microsoft.com/windows/powertoys/) | Windows | 免费、开源 | 文字提取、颜色选择、窗口置顶、快速启动等 | Windows 综合增强工具 |
+| [Ditto](https://ditto-cp.sourceforge.io/) | Windows | 免费、开源 | 打开可搜索的多条剪贴板历史 | 频繁复制粘贴时很实用 |
+| [Everything](https://www.voidtools.com/) | Windows | 免费 | 按名称快速查找文件和文件夹 | 适合给“搜索文件”配置全局快捷键 |
+| [Flow Launcher](https://www.flowlauncher.com/) | Windows | 免费、开源 | 启动应用、搜索文件、运行命令和插件 | 适合做统一的“快速启动”入口 |
+| [AutoHotkey](https://www.autohotkey.com/) | Windows | 免费、开源 | 把一个快捷键扩展为多步键盘、窗口或脚本自动化 | 高级用法，脚本应先在本机独立验收 |
+| [Raycast](https://www.raycast.com/) | macOS | 提供免费版 | 启动应用、搜索、剪贴板和扩展命令 | macOS 快速启动入口 |
+| [快捷指令](https://support.apple.com/guide/shortcuts-mac/welcome/mac) | macOS | 系统自带 | 将多个应用操作组合成可触发的工作流 | macOS 多步自动化入口 |
+
+### 建议按钮组合
+
+以下名称只是菜单布局建议；具体组合键应在对应工具内设置，并避开系统和远程控制软件已经占用的快捷键。
+
+| 按钮名称 | 关联工具 | 建议动作 |
+| --- | --- | --- |
+| 截图标注 | ShareX / Flameshot | 区域截图，并进入标注界面 |
+| 开始/停止录屏 | ShareX / OBS Studio | 切换区域录屏或当前场景录制 |
+| 截图 OCR | ShareX / PowerToys | 框选屏幕文字并复制到剪贴板 |
+| 剪贴板历史 | Ditto / Raycast | 打开剪贴板历史搜索 |
+| 搜索文件 | Everything / Flow Launcher | 打开搜索框并定位文件 |
+| 快速启动 | Flow Launcher / Raycast | 打开命令面板，启动应用或命令 |
+| 自动化动作 | AutoHotkey / 快捷指令 | 触发已经在本机验收过的多步流程 |
+
+推荐从少量高频按钮开始：Windows 可先用“ShareX + Ditto”，macOS 可先用“Flameshot + Raycast”。需要摄像头、多场景或直播时再加入 OBS Studio；需要一个按钮完成多步操作时，再使用 AutoHotkey 或快捷指令承接流程。按钮过多会降低远程触控效率，建议保留最常用的 6～10 个，其余能力交给快速启动工具搜索。
+
 ### Windows 窗口行为
 
 窗口使用 `WS_EX_NOACTIVATE` 并关闭 ShowActivated，预期不会夺走原应用焦点。多显示器只按 Windows 虚拟桌面整体边界约束位置；首次启动放在主屏，拖动或重启恢复时允许保留副屏坐标。吸附只处理虚拟桌面的最外侧左右边界，不会按每台显示器的工作区贴边；副屏内沿及不同排列/混合 DPI 尚未验收。UAC 安全桌面及独占全屏场景不保证可见。
