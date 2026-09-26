@@ -538,6 +538,6 @@ private final class ShortcutRecorderView: NSView {
 }
 
 let application = NSApplication.shared
-let controller = AssistantController()
+private let controller = AssistantController()
 application.delegate = controller
 application.run()
