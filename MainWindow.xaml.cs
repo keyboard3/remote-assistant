@@ -156,11 +156,33 @@ public partial class MainWindow : Window
     {
         ActionsPanel.Children.Clear();
         _actionButtons.Clear();
-        foreach (var action in settings.Actions)
+        foreach (var action in settings.Actions.Where(action => action.Enabled))
         {
             var button = CreateActionButton(action);
             _actionButtons[action.Id] = button;
             ActionsPanel.Children.Add(button);
+        }
+        ActionsHintBadge.Visibility = _actionButtons.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        if (_actionButtons.Count == 0)
+        {
+            ActionsPanel.Children.Add(new Border
+            {
+                Background = (Brush)FindResource("Surface"),
+                BorderBrush = (Brush)FindResource("Stroke"),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(12),
+                Padding = new Thickness(16, 18, 16, 18),
+                Margin = new Thickness(0, 0, 0, 10),
+                Child = new TextBlock
+                {
+                    Text = "暂无显示的快捷操作\n请在设置中开启“显示”",
+                    Foreground = (Brush)FindResource("MutedInk"),
+                    FontSize = 11.5,
+                    TextAlignment = TextAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    LineHeight = 19
+                }
+            });
         }
         ResizeExpandedToContent();
         if (error is not null) StatusText.Text = error;
@@ -172,24 +194,41 @@ public partial class MainWindow : Window
         {
             Style = (Style)FindResource("MenuActionButtonStyle"),
             Margin = new Thickness(0, 0, 0, 10),
-            IsEnabled = action.Enabled,
+            IsEnabled = true,
             ToolTip = $"执行组合键 {action.Shortcut}。"
         };
         AutomationProperties.SetName(button, action.Title);
         button.Click += async (_, _) => await ExecuteShortcutActionAsync(action);
         var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(42) });
         grid.ColumnDefinitions.Add(new ColumnDefinition());
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
-        var icon = new Border { Width = 38, Height = 38, CornerRadius = new CornerRadius(11), Background = (Brush)new BrushConverter().ConvertFrom("#30463743")! };
-        icon.Child = new TextBlock { Text = "⌨", Foreground = (Brush)FindResource("Accent"), FontSize = 20, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        var icon = new Border
+        {
+            Width = 38,
+            Height = 38,
+            CornerRadius = new CornerRadius(11),
+            Background = (Brush)FindResource("AccentSoft")
+        };
+        icon.Child = new System.Windows.Shapes.Path
+        {
+            Width = 19,
+            Height = 19,
+            Stretch = Stretch.Uniform,
+            Stroke = (Brush)FindResource("Accent"),
+            StrokeThickness = 1.6,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
+            Data = Geometry.Parse("M3,6 H21 V18 H3 Z M6,10 H8 M10,10 H12 M14,10 H16 M18,10 H19 M6,14 H9 M11,14 H14 M16,14 H19")
+        };
         grid.Children.Add(icon);
         var text = new StackPanel { Margin = new Thickness(10, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(text, 1);
         text.Children.Add(new TextBlock { Text = action.Title, Foreground = (Brush)FindResource("Ink"), FontSize = 14, FontWeight = FontWeights.SemiBold });
-        text.Children.Add(new TextBlock { Text = $"执行 · {action.Shortcut}", Foreground = (Brush)FindResource("MutedInk"), FontSize = 10.5, Margin = new Thickness(0, 3, 0, 0) });
+        text.Children.Add(new TextBlock { Text = action.Shortcut, Foreground = (Brush)FindResource("MutedInk"), FontSize = 10.5, Margin = new Thickness(0, 3, 0, 0) });
         grid.Children.Add(text);
-        var arrow = new TextBlock { Text = "›", Foreground = (Brush)new BrushConverter().ConvertFrom("#A8B3C3")!, FontSize = 24, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+        var arrow = new TextBlock { Text = "›", Foreground = (Brush)FindResource("SubtleInk"), FontSize = 22, FontWeight = FontWeights.Light, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(arrow, 2);
         grid.Children.Add(arrow);
         button.Content = grid;

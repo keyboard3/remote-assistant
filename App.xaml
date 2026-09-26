@@ -3,15 +3,92 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
-    <SolidColorBrush x:Key="Ink" Color="#F5F7FC" />
-    <SolidColorBrush x:Key="MutedInk" Color="#B4BECE" />
-    <SolidColorBrush x:Key="Panel" Color="#F41A202C" />
-    <SolidColorBrush x:Key="Accent" Color="#78DDBE" />
+    <SolidColorBrush x:Key="Ink" Color="#F7F8FC" />
+    <SolidColorBrush x:Key="MutedInk" Color="#A6AEC1" />
+    <SolidColorBrush x:Key="SubtleInk" Color="#747E95" />
+    <SolidColorBrush x:Key="Panel" Color="#FA111522" />
+    <SolidColorBrush x:Key="Surface" Color="#191F2E" />
+    <SolidColorBrush x:Key="SurfaceRaised" Color="#20283A" />
+    <SolidColorBrush x:Key="Stroke" Color="#303A50" />
+    <SolidColorBrush x:Key="Accent" Color="#8EA8FF" />
+    <SolidColorBrush x:Key="AccentStrong" Color="#728FFF" />
+    <SolidColorBrush x:Key="AccentSoft" Color="#252E53" />
+    <SolidColorBrush x:Key="Danger" Color="#FF9A9A" />
+
+    <Style TargetType="{x:Type Window}">
+      <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI" />
+      <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+      <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+    </Style>
+
+    <Style TargetType="{x:Type TextBox}">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="Padding" Value="11,6" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+      <Setter Property="Background" Value="#141A28" />
+      <Setter Property="BorderBrush" Value="{StaticResource Stroke}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CaretBrush" Value="{StaticResource Accent}" />
+      <Setter Property="SelectionBrush" Value="{StaticResource AccentStrong}" />
+    </Style>
+
+    <Style TargetType="{x:Type CheckBox}">
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="SlimScrollThumbStyle" TargetType="{x:Type Thumb}">
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Margin" Value="1,0" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type Thumb}">
+            <Border x:Name="ThumbChrome" Background="#526079" CornerRadius="3" />
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="ThumbChrome" Property="Background" Value="#7182A3" />
+              </Trigger>
+              <Trigger Property="IsDragging" Value="True">
+                <Setter TargetName="ThumbChrome" Property="Background" Value="{StaticResource Accent}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="{x:Type ScrollBar}">
+      <Setter Property="Width" Value="7" />
+      <Setter Property="MinWidth" Value="7" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="Transparent" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type ScrollBar}">
+            <Grid Width="7" Background="Transparent">
+              <Track x:Name="PART_Track" IsDirectionReversed="True" Focusable="False">
+                <Track.DecreaseRepeatButton>
+                  <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False" />
+                </Track.DecreaseRepeatButton>
+                <Track.Thumb>
+                  <Thumb Style="{StaticResource SlimScrollThumbStyle}" />
+                </Track.Thumb>
+                <Track.IncreaseRepeatButton>
+                  <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False" />
+                </Track.IncreaseRepeatButton>
+              </Track>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 
     <Style x:Key="MenuButtonBaseStyle" TargetType="{x:Type Button}">
       <Setter Property="Foreground" Value="{StaticResource Ink}" />
-      <Setter Property="Background" Value="#222A38" />
-      <Setter Property="BorderBrush" Value="#394557" />
+      <Setter Property="Background" Value="{StaticResource Surface}" />
+      <Setter Property="BorderBrush" Value="{StaticResource Stroke}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="12,8" />
       <Setter Property="Cursor" Value="Hand" />
@@ -22,7 +99,7 @@
           <ControlTemplate TargetType="{x:Type Button}">
             <Border x:Name="Chrome" Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="14"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12"
                     SnapsToDevicePixels="True">
               <ContentPresenter Margin="{TemplateBinding Padding}"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -31,18 +108,18 @@
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Chrome" Property="Background" Value="#2B3545" />
-                <Setter TargetName="Chrome" Property="BorderBrush" Value="#668BC3B0" />
+                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource SurfaceRaised}" />
+                <Setter TargetName="Chrome" Property="BorderBrush" Value="#52658F" />
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="Chrome" Property="Background" Value="#344354" />
-                <Setter TargetName="Chrome" Property="BorderBrush" Value="#78DDBE" />
+                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource AccentSoft}" />
+                <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource Accent}" />
               </Trigger>
               <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter TargetName="Chrome" Property="BorderBrush" Value="#78DDBE" />
+                <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource Accent}" />
               </Trigger>
               <Trigger Property="IsEnabled" Value="False">
-                <Setter TargetName="Chrome" Property="Opacity" Value="0.5" />
+                <Setter TargetName="Chrome" Property="Opacity" Value="0.42" />
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -51,15 +128,29 @@
     </Style>
 
     <Style x:Key="MenuActionButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MenuButtonBaseStyle}">
-      <Setter Property="Height" Value="64" />
+      <Setter Property="Height" Value="66" />
       <Setter Property="FontSize" Value="14" />
     </Style>
 
     <Style x:Key="MenuUtilityButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MenuButtonBaseStyle}">
-      <Setter Property="Height" Value="44" />
-      <Setter Property="Background" Value="#1B222E" />
-      <Setter Property="BorderBrush" Value="#313B4A" />
+      <Setter Property="Height" Value="42" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style x:Key="SecondaryButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MenuButtonBaseStyle}">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Background" Value="{StaticResource Surface}" />
+    </Style>
+
+    <Style x:Key="PrimaryButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MenuButtonBaseStyle}">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Background" Value="{StaticResource AccentStrong}" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentStrong}" />
+      <Setter Property="Foreground" Value="White" />
     </Style>
   </Application.Resources>
 </Application>
