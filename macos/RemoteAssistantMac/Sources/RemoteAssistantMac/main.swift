@@ -267,9 +267,13 @@ private struct AssistantView: View {
                     Text("远程桌面快捷操作").font(.system(size: 11)).foregroundColor(.gray)
                 }
                 Spacer()
-                Button(action: model.showSettings) { Image(systemName: "gearshape") }
+                Button(action: model.showSettings) {
+                    Image(systemName: "gearshape").foregroundColor(.white.opacity(0.85))
+                }
                     .help("设置快捷操作")
-                Button(action: model.collapse) { Image(systemName: "xmark") }
+                Button(action: model.collapse) {
+                    Image(systemName: "xmark").foregroundColor(.white.opacity(0.85))
+                }
                     .help("收起菜单")
             }
             .buttonStyle(.plain)
